@@ -1,4 +1,5 @@
 import Client from "../models/Client.model.js";
+import Invoice from "../models/Invoice.model.js";
 import { handleError } from "../helpers/handleError.js";
 
 // CREATE CLIENT
@@ -39,13 +40,29 @@ export const createClient = async (req, res, next) => {
   }
 };
 
-// GET ALL CLIENTS
-
+// GET ALL CLIENTS / SEARCH CLIENTS
 export const getClients = async (req, res, next) => {
   try {
-    const clients = await Client.find({
+    const { search } = req.query;
+
+    const filter = {
       user: req.user._id,
-    }).sort({ createdAt: -1 });
+    };
+
+    // Search by name, company name or email
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), "i");
+
+      filter.$or = [
+        { name: searchRegex },
+        { companyName: searchRegex },
+        { email: searchRegex },
+      ];
+    }
+
+    const clients = await Client.find(filter).sort({
+      createdAt: -1,
+    });
 
     res.status(200).json({
       success: true,
@@ -57,7 +74,6 @@ export const getClients = async (req, res, next) => {
 };
 
 // GET SINGLE CLIENT
-
 export const getClientById = async (req, res, next) => {
   try {
     const client = await Client.findOne({
@@ -120,10 +136,10 @@ export const updateClient = async (req, res, next) => {
 };
 
 // DELETE CLIENT
-
 export const deleteClient = async (req, res, next) => {
   try {
-    const client = await Client.findOneAndDelete({
+    // Check whether this client belongs to the logged-in user
+    const client = await Client.findOne({
       _id: req.params.id,
       user: req.user._id,
     });
@@ -131,6 +147,24 @@ export const deleteClient = async (req, res, next) => {
     if (!client) {
       return next(handleError(404, "Client not found"));
     }
+
+    // Check whether invoices exist for this client
+    const invoiceExists = await Invoice.exists({
+      client: req.params.id,
+      user: req.user._id,
+    });
+
+    if (invoiceExists) {
+      return next(
+        handleError(
+          409,
+          "Client cannot be deleted because invoices exist for this client"
+        )
+      );
+    }
+
+    // Delete client only when no invoices exist
+    await Client.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,

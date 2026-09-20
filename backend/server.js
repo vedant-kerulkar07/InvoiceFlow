@@ -7,6 +7,7 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import clientRoutes from "./routes/client.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";
+import dashboardRoutes from "./routes/dashboard.route.js";
 
 
 dotenv.config();
@@ -41,6 +42,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 
 // Global Error Handler

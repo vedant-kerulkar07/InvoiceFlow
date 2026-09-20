@@ -1,14 +1,14 @@
 import Invoice from "../models/Invoice.model.js";
 import Client from "../models/Client.model.js";
 import { handleError } from "../helpers/handleError.js";
+import { generateInvoiceNumber } from "../utils/generateInvoiceNumber.js";
+import { updateOverdueInvoices } from "../utils/updateOverdueInvoices.js";
 
 // CREATE INVOICE
-
 export const createInvoice = async (req, res, next) => {
   try {
     const {
       client,
-      invoiceNumber,
       items,
       issueDate,
       dueDate,
@@ -19,10 +19,6 @@ export const createInvoice = async (req, res, next) => {
 
     if (!client) {
       return next(handleError(400, "Client is required"));
-    }
-
-    if (!invoiceNumber) {
-      return next(handleError(400, "Invoice number is required"));
     }
 
     if (!items || items.length === 0) {
@@ -43,28 +39,17 @@ export const createInvoice = async (req, res, next) => {
       );
     }
 
+    // Check whether client belongs to logged-in user
     const existingClient = await Client.findOne({
       _id: client,
       user: req.user._id,
     });
 
     if (!existingClient) {
-      return next(
-        handleError(404, "Client not found")
-      );
+      return next(handleError(404, "Client not found"));
     }
 
-  
-    const existingInvoice = await Invoice.findOne({
-      invoiceNumber,
-    });
-
-    if (existingInvoice) {
-      return next(
-        handleError(409, "Invoice number already exists")
-      );
-    }
-
+    // Validate and calculate invoice items
     const calculatedItems = items.map((item) => {
       const quantity = Number(item.quantity);
       const rate = Number(item.rate);
@@ -123,8 +108,10 @@ export const createInvoice = async (req, res, next) => {
       );
     }
 
-    // Create invoice
+    // Generate invoice number automatically
+    const invoiceNumber = await generateInvoiceNumber();
 
+    // Create invoice
     const invoice = await Invoice.create({
       user: req.user._id,
       client,
@@ -157,13 +144,60 @@ export const createInvoice = async (req, res, next) => {
   }
 };
 
-// GET ALL INVOICES
-
+// GET ALL INVOICES / SEARCH / FILTER
 export const getInvoices = async (req, res, next) => {
   try {
-    const invoices = await Invoice.find({
+    // Update overdue invoices before fetching
+    await updateOverdueInvoices(req.user._id);
+
+    const {
+      search,
+      client,
+      status,
+      fromDate,
+      toDate,
+    } = req.query;
+
+    const filter = {
       user: req.user._id,
-    })
+    };
+
+    // Search by invoice number
+    if (search && search.trim()) {
+      filter.invoiceNumber = {
+        $regex: search.trim(),
+        $options: "i",
+      };
+    }
+
+    // Filter by client
+    if (client) {
+      filter.client = client;
+    }
+
+    // Filter by status
+    if (status) {
+      filter.status = status;
+    }
+
+    // Filter by issue date
+    if (fromDate || toDate) {
+      filter.issueDate = {};
+
+      if (fromDate) {
+        filter.issueDate.$gte = new Date(fromDate);
+      }
+
+      if (toDate) {
+        const endDate = new Date(toDate);
+
+        endDate.setHours(23, 59, 59, 999);
+
+        filter.issueDate.$lte = endDate;
+      }
+    }
+
+    const invoices = await Invoice.find(filter)
       .populate("client", "name companyName email")
       .sort({ createdAt: -1 });
 
@@ -177,9 +211,11 @@ export const getInvoices = async (req, res, next) => {
 };
 
 // GET SINGLE INVOICE
-
 export const getInvoiceById = async (req, res, next) => {
   try {
+    // Update overdue invoices before fetching
+    await updateOverdueInvoices(req.user._id);
+
     const invoice = await Invoice.findOne({
       _id: req.params.id,
       user: req.user._id,
@@ -201,12 +237,10 @@ export const getInvoiceById = async (req, res, next) => {
 };
 
 // UPDATE INVOICE
-
 export const updateInvoice = async (req, res, next) => {
   try {
     const {
       client,
-      invoiceNumber,
       items,
       issueDate,
       dueDate,
@@ -226,6 +260,7 @@ export const updateInvoice = async (req, res, next) => {
       );
     }
 
+    // Update client
     if (client) {
       const existingClient = await Client.findOne({
         _id: client,
@@ -241,21 +276,9 @@ export const updateInvoice = async (req, res, next) => {
       invoice.client = client;
     }
 
-    // Invoice number
-    if (invoiceNumber && invoiceNumber !== invoice.invoiceNumber) {
-      const existingInvoice = await Invoice.findOne({
-        invoiceNumber,
-        _id: { $ne: invoice._id },
-      });
+    // Invoice number is intentionally NOT updated.
+    // It is generated automatically during invoice creation.
 
-      if (existingInvoice) {
-        return next(
-          handleError(409, "Invoice number already exists")
-        );
-      }
-
-      invoice.invoiceNumber = invoiceNumber;
-    }
     // Recalculate items
     if (items) {
       if (!Array.isArray(items) || items.length === 0) {
@@ -301,18 +324,22 @@ export const updateInvoice = async (req, res, next) => {
       });
     }
 
+    // Update issue date
     if (issueDate !== undefined) {
       invoice.issueDate = issueDate;
     }
 
+    // Update due date
     if (dueDate !== undefined) {
       invoice.dueDate = dueDate;
     }
 
+    // Update status
     if (status !== undefined) {
       invoice.status = status;
     }
 
+    // Update tax percentage
     if (taxPercentage !== undefined) {
       if (Number(taxPercentage) < 0) {
         return next(
@@ -326,6 +353,7 @@ export const updateInvoice = async (req, res, next) => {
       invoice.taxPercentage = Number(taxPercentage);
     }
 
+    // Update discount
     if (discount !== undefined) {
       if (Number(discount) < 0) {
         return next(
@@ -338,9 +366,11 @@ export const updateInvoice = async (req, res, next) => {
 
       invoice.discount = Number(discount);
     }
+
     // ALWAYS recalculate totals
     const subtotal = invoice.items.reduce(
-      (total, item) => total + item.quantity * item.rate,
+      (total, item) =>
+        total + item.quantity * item.rate,
       0
     );
 
@@ -348,7 +378,9 @@ export const updateInvoice = async (req, res, next) => {
       (subtotal * invoice.taxPercentage) / 100;
 
     const grandTotal =
-      subtotal + taxAmount - invoice.discount;
+      subtotal +
+      taxAmount -
+      invoice.discount;
 
     if (grandTotal < 0) {
       return next(
