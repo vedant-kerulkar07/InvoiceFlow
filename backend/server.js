@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth.routes.js";
 import clientRoutes from "./routes/client.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";
 import dashboardRoutes from "./routes/dashboard.route.js";
+import invoiceExportRoutes from "./routes/invoiceExport.routes.js";
 
 
 dotenv.config();
@@ -42,6 +43,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/invoice-export", invoiceExportRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 

@@ -17,22 +17,22 @@ import Clients from "./pages/clients/Clients";
 import CreateClient from "./pages/clients/CreateClient";
 import EditClient from "./pages/clients/EditClient";
 
-
-// Layout & Authentication
-import MainLayout from "./components/layout/MainLayout";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
+// Invoice Pages
 import Invoices from "./pages/invoices/Invoices";
 import CreateInvoice from "./pages/invoices/CreateInvoice";
 import EditInvoice from "./pages/invoices/EditInvoice";
 import InvoiceDetails from "./pages/invoices/InvoiceDetails";
+import InvoiceExport from "./pages/invoices/InvoiceExport";
+
+// Layout & Authentication
+import MainLayout from "./components/layout/MainLayout";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ========================================
-            Public Routes
-        ======================================== */}
+ 
 
         {/* Redirect root to login */}
         <Route
@@ -51,22 +51,13 @@ function App() {
           element={<Register />}
         />
 
-        {/* ========================================
-            Protected Routes
-        ======================================== */}
-
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
 
-            {/* Dashboard */}
             <Route
               path="/dashboard"
               element={<Dashboard />}
             />
-
-            {/* ================================
-                Client Routes
-            ================================= */}
 
             <Route
               path="/clients"
@@ -82,10 +73,6 @@ function App() {
               path="/clients/edit/:id"
               element={<EditClient />}
             />
-
-            {/* ================================
-                Invoice Routes
-            ================================= */}
 
             <Route
               path="/invoices"
@@ -106,12 +93,14 @@ function App() {
               path="/invoices/:id"
               element={<InvoiceDetails />}
             />
+
+            <Route
+              path="/invoice-export"
+              element={<InvoiceExport />}
+            />
+
           </Route>
         </Route>
-
-        {/* ========================================
-            Unknown Routes
-        ======================================== */}
 
         <Route
           path="*"

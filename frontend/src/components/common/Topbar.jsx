@@ -7,10 +7,12 @@ const navLinks = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/clients", label: "Clients" },
   { to: "/invoices", label: "Invoices" },
+  { to: "/invoice-export", label: "Export Invoices" },
 ];
 
 const Topbar = () => {
   const navigate = useNavigate();
+
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -43,7 +45,7 @@ const Topbar = () => {
             InvoiceFlow
           </Link>
 
-          {/* Desktop navigation */}
+          {/* Desktop Navigation */}
           <nav className="hidden items-center gap-8 md:flex">
             {navLinks.map((link) => (
               <NavLink
@@ -60,6 +62,7 @@ const Topbar = () => {
                 {({ isActive }) => (
                   <>
                     {link.label}
+
                     {isActive && (
                       <motion.span
                         layoutId="topbar-underline"
@@ -76,6 +79,7 @@ const Topbar = () => {
               </NavLink>
             ))}
 
+            {/* Logout */}
             <button
               type="button"
               onClick={handleLogout}
@@ -86,7 +90,7 @@ const Topbar = () => {
             </button>
           </nav>
 
-          {/* Mobile menu button */}
+          {/* Mobile Menu Button */}
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
@@ -120,7 +124,7 @@ const Topbar = () => {
           </button>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile Menu */}
         <AnimatePresence initial={false}>
           {menuOpen && (
             <motion.div
@@ -150,6 +154,7 @@ const Topbar = () => {
                   </NavLink>
                 ))}
 
+                {/* Mobile Logout */}
                 <button
                   type="button"
                   onClick={handleLogout}
