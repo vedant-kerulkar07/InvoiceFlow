@@ -35,14 +35,14 @@ function App() {
  
 
         {/* Redirect root to login */}
-        <Route
+        {/* <Route
           path="/"
           element={<Navigate to="/login" replace />}
-        />
+        /> */}
 
         {/* Authentication Routes */}
         <Route
-          path="/login"
+          path="/"
           element={<Login />}
         />
 
@@ -102,10 +102,10 @@ function App() {
           </Route>
         </Route>
 
-        <Route
+        {/* <Route
           path="*"
           element={<Navigate to="/login" replace />}
-        />
+        /> */}
       </Routes>
     </BrowserRouter>
   );
