@@ -654,6 +654,7 @@ const Invoices = () => {
                                 invoice.dueDate
                               )}
                             </TableCell>
+            
 
                             {/* Amount */}
 
@@ -676,7 +677,7 @@ const Invoices = () => {
                                 {invoice.status}
                               </span>
                             </TableCell>
-
+                            
                             {/* Actions */}
 
                             <TableCell className="px-6">

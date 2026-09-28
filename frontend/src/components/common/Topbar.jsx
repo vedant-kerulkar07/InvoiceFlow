@@ -22,7 +22,7 @@ const Topbar = () => {
 
       await logoutUser();
 
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
