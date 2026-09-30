@@ -526,3 +526,12 @@ Project Repository:
 https://github.com/vedant-kerulkar07/InvoiceFlow
 
 ---
+## 🏗️ System Architecture
+
+<p align="center">
+  <img 
+    src="./screenshots/architecture-diagram.png" 
+    alt="InvoiceFlow System Architecture"
+    width="100%"
+  />
+</p>
