@@ -526,3 +526,4 @@ Project Repository:
 https://github.com/vedant-kerulkar07/InvoiceFlow
 
 ---
+[![Architecture diagram of vedant-kerulkar07/invoiceflow](https://gitdiagram.com/vedant-kerulkar07/invoiceflow/diagram.png)](https://gitdiagram.com/vedant-kerulkar07/invoiceflow?utm_source=readme&utm_medium=picture)
