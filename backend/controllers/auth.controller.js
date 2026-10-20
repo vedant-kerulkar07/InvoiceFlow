@@ -224,6 +224,7 @@ export const GetMe = async (req, res, next) => {
   }
 };
 
+
 // --------------------- FORGOT PASSWORD ---------------------
 
 export const ForgotPassword = async (req, res, next) => {
@@ -240,28 +241,27 @@ export const ForgotPassword = async (req, res, next) => {
       email: normalizedEmail,
     }).select(
       "+resetOtp +resetOtpExpiry +resetOtpAttempts " +
-        "+resetVerifiedTokenHash +resetVerifiedTokenExpiry"
+      "+resetVerifiedTokenHash +resetVerifiedTokenExpiry"
     );
 
-    // Use the same response whether or not the email exists.
-    // This helps prevent account/email enumeration.
-    const genericResponse = {
-      success: true,
-      message:
-        "If an account exists for this email, a password reset OTP will be sent.",
-    };
-
+    // Check whether the email is registered.
     if (!user) {
-      return res.status(200).json(genericResponse);
+      return next(
+        handleError(
+          404,
+          "This email is not registered. Please enter your registered email address."
+        )
+      );
     }
 
+    // Generate a 6-digit OTP.
     const otp = crypto.randomInt(100000, 1000000).toString();
 
     user.resetOtp = hashValue(otp);
     user.resetOtpExpiry = new Date(Date.now() + OTP_EXPIRY_MS);
     user.resetOtpAttempts = 0;
 
-    // Invalidate any previous verified reset token.
+    // Invalidate any previously verified reset token.
     user.resetVerifiedTokenHash = null;
     user.resetVerifiedTokenExpiry = null;
 
@@ -274,6 +274,7 @@ export const ForgotPassword = async (req, res, next) => {
       user.resetOtp = null;
       user.resetOtpExpiry = null;
       user.resetOtpAttempts = 0;
+
       await user.save();
 
       return next(
@@ -281,9 +282,14 @@ export const ForgotPassword = async (req, res, next) => {
       );
     }
 
-    return res.status(200).json(genericResponse);
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully. Please check your inbox.",
+    });
   } catch (error) {
-    next(handleError(500, "Failed to process password reset request"));
+    return next(
+      handleError(500, "Failed to process password reset request")
+    );
   }
 };
 
@@ -308,7 +314,7 @@ export const VerifyOtp = async (req, res, next) => {
       email: normalizeEmail(email),
     }).select(
       "+resetOtp +resetOtpExpiry +resetOtpAttempts " +
-        "+resetVerifiedTokenHash +resetVerifiedTokenExpiry"
+      "+resetVerifiedTokenHash +resetVerifiedTokenExpiry"
     );
 
     if (!user || !user.resetOtp || !user.resetOtpExpiry) {
@@ -321,7 +327,9 @@ export const VerifyOtp = async (req, res, next) => {
       user.resetOtpAttempts = 0;
       await user.save();
 
-      return next(handleError(400, "OTP has expired. Request a new one."));
+      return next(
+        handleError(400, "OTP has expired. Request a new one.")
+      );
     }
 
     if (user.resetOtpAttempts >= MAX_OTP_ATTEMPTS) {
@@ -331,7 +339,10 @@ export const VerifyOtp = async (req, res, next) => {
       await user.save();
 
       return next(
-        handleError(429, "Too many incorrect attempts. Request a new OTP.")
+        handleError(
+          429,
+          "Too many incorrect attempts. Request a new OTP."
+        )
       );
     }
 
@@ -357,6 +368,7 @@ export const VerifyOtp = async (req, res, next) => {
     user.resetOtp = null;
     user.resetOtpExpiry = null;
     user.resetOtpAttempts = 0;
+
     user.resetVerifiedTokenHash = hashValue(resetToken);
     user.resetVerifiedTokenExpiry = new Date(
       Date.now() + RESET_TOKEN_EXPIRY_MS
@@ -371,7 +383,7 @@ export const VerifyOtp = async (req, res, next) => {
       expiresIn: RESET_TOKEN_EXPIRY_MS / 1000,
     });
   } catch (error) {
-    next(handleError(500, "Failed to verify OTP"));
+    return next(handleError(500, "Failed to verify OTP"));
   }
 };
 
@@ -401,7 +413,6 @@ export const ResetPassword = async (req, res, next) => {
       );
     }
 
-    // If the frontend sends confirmPassword, validate it too.
     if (
       confirmPassword !== undefined &&
       confirmPassword !== password
@@ -414,12 +425,15 @@ export const ResetPassword = async (req, res, next) => {
       resetVerifiedTokenExpiry: { $gt: new Date() },
     }).select(
       "+resetOtp +resetOtpExpiry +resetOtpAttempts " +
-        "+resetVerifiedTokenHash +resetVerifiedTokenExpiry"
+      "+resetVerifiedTokenHash +resetVerifiedTokenExpiry"
     );
 
     if (!user) {
       return next(
-        handleError(400, "Invalid or expired reset token. Verify your OTP again.")
+        handleError(
+          400,
+          "Invalid or expired reset token. Verify your OTP again."
+        )
       );
     }
 
@@ -432,9 +446,10 @@ export const ResetPassword = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: "Password reset successful. Please log in with your new password.",
+      message:
+        "Password reset successful. Please log in with your new password.",
     });
   } catch (error) {
-    next(handleError(500, "Failed to reset password"));
+    return next(handleError(500, "Failed to reset password"));
   }
 };
