@@ -1,6 +1,7 @@
 import Client from "../models/Client.model.js";
 import Invoice from "../models/Invoice.model.js";
 import { handleError } from "../helpers/handleError.js";
+import { validateGST } from "../helpers/validateGST.js";
 
 // CREATE CLIENT
 export const createClient = async (req, res, next) => {
@@ -20,6 +21,13 @@ export const createClient = async (req, res, next) => {
       );
     }
 
+    // Validate GST number
+    const gstValidation = validateGST(gstNumber);
+
+    if (!gstValidation.valid) {
+      return next(handleError(400, gstValidation.message));
+    }
+
     const client = await Client.create({
       user: req.user._id,
       name,
@@ -27,7 +35,7 @@ export const createClient = async (req, res, next) => {
       email: email.toLowerCase(),
       phone,
       billingAddress,
-      gstNumber,
+      gstNumber: gstValidation.value,
     });
 
     res.status(201).json({
@@ -49,7 +57,6 @@ export const getClients = async (req, res, next) => {
       user: req.user._id,
     };
 
-    // Search by name, company name or email
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), "i");
 
@@ -115,13 +122,23 @@ export const updateClient = async (req, res, next) => {
       return next(handleError(404, "Client not found"));
     }
 
+    // Validate GST only when provided
+    if (gstNumber !== undefined && gstNumber !== null) {
+      const gstValidation = validateGST(gstNumber);
+
+      if (!gstValidation.valid) {
+        return next(handleError(400, gstValidation.message));
+      }
+
+      client.gstNumber = gstValidation.value;
+    }
+
     client.name = name ?? client.name;
     client.companyName = companyName ?? client.companyName;
     client.email = email?.toLowerCase() ?? client.email;
     client.phone = phone ?? client.phone;
     client.billingAddress =
       billingAddress ?? client.billingAddress;
-    client.gstNumber = gstNumber ?? client.gstNumber;
 
     await client.save();
 
@@ -138,7 +155,6 @@ export const updateClient = async (req, res, next) => {
 // DELETE CLIENT
 export const deleteClient = async (req, res, next) => {
   try {
-    // Check whether this client belongs to the logged-in user
     const client = await Client.findOne({
       _id: req.params.id,
       user: req.user._id,
@@ -148,7 +164,6 @@ export const deleteClient = async (req, res, next) => {
       return next(handleError(404, "Client not found"));
     }
 
-    // Check whether invoices exist for this client
     const invoiceExists = await Invoice.exists({
       client: req.params.id,
       user: req.user._id,
@@ -163,7 +178,6 @@ export const deleteClient = async (req, res, next) => {
       );
     }
 
-    // Delete client only when no invoices exist
     await Client.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
