@@ -1,3 +1,4 @@
+
 import express from "express";
 
 import {
@@ -10,14 +11,29 @@ import {
 
 import { protect } from "../middleware/auth.middleware.js";
 
+import {
+  clientReadLimiter,
+  clientWriteLimiter,
+} from "../middleware/rateLimit.middleware.js";
+
 const clientRoutes = express.Router();
 
+// ---------------- ROUTES ----------------
+
+// All client endpoints require authentication.
 clientRoutes.use(protect);
 
-clientRoutes.post("/", createClient);
-clientRoutes.get("/", getClients);
-clientRoutes.get("/:id", getClientById);
-clientRoutes.put("/:id", updateClient);
-clientRoutes.delete("/:id", deleteClient);
+// Create client.
+clientRoutes.post("/", clientWriteLimiter, createClient);
+
+// Read clients.
+clientRoutes.get("/", clientReadLimiter, getClients);
+clientRoutes.get("/:id", clientReadLimiter, getClientById);
+
+// Update client.
+clientRoutes.put("/:id", clientWriteLimiter, updateClient);
+
+// Delete client.
+clientRoutes.delete("/:id", clientWriteLimiter, deleteClient);
 
 export default clientRoutes;
