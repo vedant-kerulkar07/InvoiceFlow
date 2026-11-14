@@ -1,3 +1,4 @@
+
 import express from "express";
 
 import {
@@ -10,14 +11,29 @@ import {
 
 import { protect } from "../middleware/auth.middleware.js";
 
+import {
+  invoiceReadLimiter,
+  invoiceWriteLimiter,
+} from "../middleware/rateLimit.middleware.js";
+
 const invoiceRoutes = express.Router();
 
+// ---------------- ROUTES ----------------
+
+// All invoice endpoints require authentication.
 invoiceRoutes.use(protect);
 
-invoiceRoutes.post("/", createInvoice);
-invoiceRoutes.get("/", getInvoices);
-invoiceRoutes.get("/:id", getInvoiceById);
-invoiceRoutes.put("/:id", updateInvoice);
-invoiceRoutes.delete("/:id", deleteInvoice);
+// Create invoice.
+invoiceRoutes.post("/", invoiceWriteLimiter, createInvoice);
+
+// Read invoices.
+invoiceRoutes.get("/", invoiceReadLimiter, getInvoices);
+invoiceRoutes.get("/:id", invoiceReadLimiter, getInvoiceById);
+
+// Update invoice.
+invoiceRoutes.put("/:id", invoiceWriteLimiter, updateInvoice);
+
+// Delete invoice.
+invoiceRoutes.delete("/:id", invoiceWriteLimiter, deleteInvoice);
 
 export default invoiceRoutes;
