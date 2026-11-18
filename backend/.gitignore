@@ -112,6 +112,13 @@ desktop.ini
 
 
 # ================================
+# Local Test Scripts (contain credentials)
+# ================================
+
+scripts/test-ratelimit.js
+
+
+# ================================
 # Miscellaneous
 # ================================
 
